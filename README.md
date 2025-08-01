@@ -72,3 +72,6 @@ https://api.chucknorris.io/jokes/search?query=term
 * Error handling and edge case coverage.
 * Ability to consume and transform external APIs.
 * Code reusability and modularity (if applicable).
+
+### Submit your app
+To submit your app, simply create a new branch and commit your changes.
