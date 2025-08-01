@@ -1,0 +1,168 @@
+name: Test Required Endpoints
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-endpoints:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js (for potential Node.js apps)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Set up Python (for potential Python apps)
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Set up Ruby (for potential Ruby apps)
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        
+    - name: Set up Go (for potential Go apps)
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install dependencies and start app
+      run: |
+        # Try to detect and install dependencies for different tech stacks
+        if [ -f "package.json" ]; then
+          echo "Detected Node.js project"
+          npm install
+          npm start &
+        elif [ -f "requirements.txt" ]; then
+          echo "Detected Python project"
+          pip install -r requirements.txt
+          python app.py &
+        elif [ -f "Gemfile" ]; then
+          echo "Detected Ruby project"
+          bundle install
+          ruby app.rb &
+        elif [ -f "go.mod" ]; then
+          echo "Detected Go project"
+          go mod download
+          go run . &
+        elif [ -f "main.py" ]; then
+          echo "Detected Python project with main.py"
+          pip install flask requests
+          python main.py &
+        elif [ -f "app.js" ] || [ -f "index.js" ]; then
+          echo "Detected Node.js project with app.js/index.js"
+          npm install express axios
+          node app.js &
+        else
+          echo "No standard project files detected. Please ensure your app starts on port 5000."
+          echo "You may need to modify this workflow to match your specific setup."
+          # Start a placeholder process to prevent the workflow from failing
+          sleep 1 &
+        fi
+        
+        # Wait for app to start
+        sleep 10
+        
+    - name: Test GET /categories endpoint
+      run: |
+        echo "Testing GET /categories endpoint..."
+        
+        # Make request to the categories endpoint
+        response=$(curl -s -w "\n%{http_code}" http://localhost:5000/categories)
+        http_code=$(echo "$response" | tail -n1)
+        body=$(echo "$response" | head -n -1)
+        
+        echo "HTTP Status Code: $http_code"
+        echo "Response Body: $body"
+        
+        # Check if response is valid JSON array
+        if [ "$http_code" -eq 200 ]; then
+          if echo "$body" | jq -e 'type == "array"' > /dev/null 2>&1; then
+            echo "✅ GET /categories test passed - Valid JSON array returned"
+          else
+            echo "❌ GET /categories test failed - Response is not a valid JSON array"
+            exit 1
+          fi
+        else
+          echo "❌ GET /categories test failed - Expected HTTP 200, got $http_code"
+          exit 1
+        fi
+        
+    - name: Test GET /joke/{category} endpoint
+      run: |
+        echo "Testing GET /joke/{category} endpoint..."
+        
+        # First get categories to use a valid category
+        categories_response=$(curl -s http://localhost:5000/categories)
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to get categories for testing"
+          exit 1
+        fi
+        
+        # Extract first category
+        category=$(echo "$categories_response" | jq -r '.[0]')
+        echo "Using category: $category"
+        
+        # Make request to the joke endpoint
+        response=$(curl -s -w "\n%{http_code}" "http://localhost:5000/joke/$category")
+        http_code=$(echo "$response" | tail -n1)
+        body=$(echo "$response" | head -n -1)
+        
+        echo "HTTP Status Code: $http_code"
+        echo "Response Body: $body"
+        
+        # Check if response is valid JSON object with required fields
+        if [ "$http_code" -eq 200 ]; then
+          if echo "$body" | jq -e 'type == "object"' > /dev/null 2>&1; then
+            # Check for required fields
+            has_id=$(echo "$body" | jq -e 'has("id")' 2>/dev/null)
+            has_url=$(echo "$body" | jq -e 'has("url")' 2>/dev/null)
+            has_category=$(echo "$body" | jq -e 'has("category")' 2>/dev/null)
+            has_value=$(echo "$body" | jq -e 'has("value")' 2>/dev/null)
+            
+            if [ "$has_id" = "true" ] && [ "$has_url" = "true" ] && [ "$has_category" = "true" ] && [ "$has_value" = "true" ]; then
+              echo "✅ GET /joke/{category} test passed - Valid response with all required fields"
+            else
+              echo "❌ GET /joke/{category} test failed - Missing required fields"
+              echo "Has id: $has_id, Has url: $has_url, Has category: $has_category, Has value: $has_value"
+              exit 1
+            fi
+          else
+            echo "❌ GET /joke/{category} test failed - Response is not a valid JSON object"
+            exit 1
+          fi
+        else
+          echo "❌ GET /joke/{category} test failed - Expected HTTP 200, got $http_code"
+          exit 1
+        fi
+        
+    - name: Test invalid category handling
+      run: |
+        echo "Testing invalid category handling..."
+        
+        # Test with an invalid category
+        response=$(curl -s -w "\n%{http_code}" "http://localhost:5000/joke/invalid_category_12345")
+        http_code=$(echo "$response" | tail -n1)
+        
+        echo "HTTP Status Code for invalid category: $http_code"
+        
+        # Should return a 4xx status code for invalid category
+        if [ "$http_code" -ge 400 ] && [ "$http_code" -lt 500 ]; then
+          echo "✅ Invalid category test passed - Proper error handling"
+        else
+          echo "⚠️ Invalid category test - Expected 4xx status code, got $http_code"
+          echo "This is acceptable if your app handles invalid categories differently"
+        fi
+        
+    - name: Cleanup
+      run: |
+        # Kill any background processes
+        pkill -f "node\|python\|ruby\|go" || true 
