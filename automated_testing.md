@@ -32,6 +32,37 @@ python challenge_timer.py full
 python challenge_timer.py stop
 ```
 
+## 🌐 Port Configuration
+
+### Application Port
+The application should run on **port 5000** by default, but this can be configured:
+
+```bash
+# Set custom port (optional)
+export APP_PORT=8000
+export APP_HOST=0.0.0.0
+
+# Run the application
+python app.py
+```
+
+### Test Client vs Real Server
+- **Tests**: Use Flask's `app.test_client()` - no real HTTP server needed
+- **Manual Testing**: Use real HTTP server on port 5000 (or custom port)
+- **Codespaces**: Port 5000 is automatically forwarded
+
+### Port Forwarding in Codespaces
+The devcontainer configuration automatically forwards:
+- **Port 5000**: Main application (Flask)
+- **Port 8000**: Alternative port
+
+### Testing URLs
+When running the application manually:
+- **Categories**: `http://localhost:5000/categories`
+- **Joke**: `http://localhost:5000/joke/dev`
+- **Search**: `http://localhost:5000/search?query=programming`
+- **Health**: `http://localhost:5000/health`
+
 ## ⏱️ Timer Commands
 
 ### Interactive Mode
@@ -168,6 +199,12 @@ The system includes a GitHub Actions workflow that automatically:
 
 ### Environment Variables
 ```bash
+# Set custom port (default: 5000)
+export APP_PORT=8000
+
+# Set custom host (default: 0.0.0.0)
+export APP_HOST=localhost
+
 # Set custom time limits (in minutes)
 export CHALLENGE_TIME_LIMIT=30
 
@@ -256,7 +293,11 @@ python run_tests.py --verbose
 pip install -r requirements-test.txt
 
 # Tests failing due to missing app
-# Create a basic Flask app in app.py
+# Create app.py with Flask application (see app.py.example)
+
+# Port already in use
+export APP_PORT=8000
+python app.py
 
 # Timer not working
 python challenge_timer.py start
@@ -271,6 +312,26 @@ pytest -v tests/
 
 # Run specific test with debug
 pytest -v -s tests/test_categories_endpoint.py::TestCategoriesEndpoint::test_get_categories_success
+
+# Test with real HTTP server
+python app.py &
+curl http://localhost:5000/categories
+```
+
+### Application Development
+```bash
+# Copy example app
+cp app.py.example app.py
+
+# Install Flask
+pip install flask requests
+
+# Run the application
+python app.py
+
+# Test endpoints manually
+curl http://localhost:5000/categories
+curl http://localhost:5000/joke/dev
 ```
 
 This automated testing system provides a comprehensive way to measure challenge completion time and evaluate candidate performance consistently across different environments. 

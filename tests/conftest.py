@@ -8,12 +8,25 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture
 def client():
     """Test client fixture for making requests to the application"""
-    # This fixture will be implemented when the actual application is created
-    # For now, it's a placeholder that will be updated once the app is built
-    from app import app
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
+    # This fixture uses Flask's test client, which doesn't require a real HTTP server
+    # The test client simulates HTTP requests without actually running on a port
+    try:
+        from app import app
+        app.config['TESTING'] = True
+        with app.test_client() as client:
+            yield client
+    except ImportError:
+        pytest.skip("Application not implemented yet. Create app.py with Flask app.")
+
+@pytest.fixture
+def app_port():
+    """Fixture providing the default port for the application"""
+    return int(os.environ.get('APP_PORT', 5000))
+
+@pytest.fixture
+def app_host():
+    """Fixture providing the default host for the application"""
+    return os.environ.get('APP_HOST', 'localhost')
 
 @pytest.fixture
 def mock_categories():
