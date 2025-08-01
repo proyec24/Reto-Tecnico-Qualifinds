@@ -16,6 +16,8 @@ But for this challenge, we'll focus only on two endpoints.
 
 ### Requirements
 
+#### Expose your app through the port `5000`.
+
 1. GET `/categories`
 
 Returns a list of the available joke categories.
