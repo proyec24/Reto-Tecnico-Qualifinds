@@ -72,17 +72,3 @@ https://api.chucknorris.io/jokes/search?query=term
 * Error handling and edge case coverage.
 * Ability to consume and transform external APIs.
 * Code reusability and modularity (if applicable).
-
-## 🚀 Automated Testing & Timing
-
-This challenge includes an automated testing system that measures completion time and evaluates your implementation.
-
-### Quick Start (GitHub Codespaces)
-
-1. **Open in Codespace**: Click "Code" → "Open with Codespaces"
-2. **Start Timer**: `python challenge_timer.py start`
-3. **Implement Endpoints**: Build your API
-4. **Test Progress**: `python challenge_timer.py test`
-5. **Complete Challenge**: `python challenge_timer.py stop`
-
-Good luck with the challenge! 🚀
