@@ -34,6 +34,11 @@ jobs:
       with:
         go-version: '1.21'
         
+    - name: Set up PHP (for potential PHP apps)
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        
     - name: Install dependencies and start app
       run: |
         # Try to detect and install dependencies for different tech stacks
@@ -53,6 +58,18 @@ jobs:
           echo "Detected Go project"
           go mod download
           go run . &
+        elif [ -f "composer.json" ]; then
+          echo "Detected PHP project"
+          composer install
+          php -S localhost:5000 &
+        elif [ -f "index.php" ]; then
+          echo "Detected PHP project with index.php"
+          composer install || true
+          php -S localhost:5000 &
+        elif [ -f "app.php" ]; then
+          echo "Detected PHP project with app.php"
+          composer install || true
+          php -S localhost:5000 &
         elif [ -f "main.py" ]; then
           echo "Detected Python project with main.py"
           pip install flask requests
@@ -64,6 +81,7 @@ jobs:
         else
           echo "No standard project files detected. Please ensure your app starts on port 5000."
           echo "You may need to modify this workflow to match your specific setup."
+          echo "Supported project types: Node.js (package.json), Python (requirements.txt/main.py), Ruby (Gemfile), Go (go.mod), PHP (composer.json/index.php/app.php)"
           # Start a placeholder process to prevent the workflow from failing
           sleep 1 &
         fi
@@ -165,4 +183,4 @@ jobs:
     - name: Cleanup
       run: |
         # Kill any background processes
-        pkill -f "node\|python\|ruby\|go" || true 
+        pkill -f "node\|python\|ruby\|go\|php" || true 
