@@ -49,6 +49,7 @@ Expected response:
 `{
     "id" : "requestId",
     "url" : "publicApiUrl",
+    "category": "TheCategoryReceived",
     "value" : "The joke in string"
 }`
 
