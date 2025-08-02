@@ -49,7 +49,26 @@ jobs:
         elif [ -f "requirements.txt" ]; then
           echo "Detected Python project"
           pip install -r requirements.txt
-          python app.py &
+          # Try to find the main Python file
+          if [ -f "app.py" ]; then
+            python app.py &
+          elif [ -f "main.py" ]; then
+            python main.py &
+          elif [ -f "server.py" ]; then
+            python server.py &
+          elif [ -f "run.py" ]; then
+            python run.py &
+          else
+            # Find the first Python file that might be the entry point
+            python_file=$(find . -maxdepth 1 -name "*.py" -not -name "__init__.py" | head -n 1)
+            if [ -n "$python_file" ]; then
+              echo "Using Python file: $python_file"
+              python "$python_file" &
+            else
+              echo "No Python entry point found. Please ensure your app starts on port 5000."
+              sleep 1 &
+            fi
+          fi
         elif [ -f "Gemfile" ]; then
           echo "Detected Ruby project"
           bundle install
@@ -74,6 +93,14 @@ jobs:
           echo "Detected Python project with main.py"
           pip install flask requests
           python main.py &
+        elif [ -f "server.py" ]; then
+          echo "Detected Python project with server.py"
+          pip install flask requests
+          python server.py &
+        elif [ -f "run.py" ]; then
+          echo "Detected Python project with run.py"
+          pip install flask requests
+          python run.py &
         elif [ -f "app.js" ] || [ -f "index.js" ]; then
           echo "Detected Node.js project with app.js/index.js"
           npm install express axios
@@ -81,9 +108,17 @@ jobs:
         else
           echo "No standard project files detected. Please ensure your app starts on port 5000."
           echo "You may need to modify this workflow to match your specific setup."
-          echo "Supported project types: Node.js (package.json), Python (requirements.txt/main.py), Ruby (Gemfile), Go (go.mod), PHP (composer.json/index.php/app.php)"
-          # Start a placeholder process to prevent the workflow from failing
-          sleep 1 &
+          echo "Supported project types: Node.js (package.json), Python (requirements.txt/main.py/server.py/run.py), Ruby (Gemfile), Go (go.mod), PHP (composer.json/index.php/app.php)"
+          # Try to find any Python file as last resort
+          python_file=$(find . -maxdepth 1 -name "*.py" -not -name "__init__.py" | head -n 1)
+          if [ -n "$python_file" ]; then
+            echo "Found Python file: $python_file - attempting to run"
+            pip install flask requests
+            python "$python_file" &
+          else
+            # Start a placeholder process to prevent the workflow from failing
+            sleep 1 &
+          fi
         fi
         
         # Wait for app to start
