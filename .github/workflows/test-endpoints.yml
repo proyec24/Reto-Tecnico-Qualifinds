@@ -39,6 +39,11 @@ jobs:
       with:
         php-version: '8.2'
         
+    - name: Set up .NET (for potential .NET apps)
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
     - name: Install dependencies and start app
       run: |
         # Try to detect and install dependencies for different tech stacks
@@ -89,6 +94,14 @@ jobs:
           echo "Detected PHP project with app.php"
           composer install || true
           php -S localhost:5000 &
+        elif [ -f "*.csproj" ]; then
+          echo "Detected .NET project"
+          dotnet restore
+          dotnet run --urls "http://localhost:5000" &
+        elif [ -f "*.sln" ]; then
+          echo "Detected .NET solution"
+          dotnet restore
+          dotnet run --urls "http://localhost:5000" &
         elif [ -f "main.py" ]; then
           echo "Detected Python project with main.py"
           pip install flask requests
@@ -108,7 +121,7 @@ jobs:
         else
           echo "No standard project files detected. Please ensure your app starts on port 5000."
           echo "You may need to modify this workflow to match your specific setup."
-          echo "Supported project types: Node.js (package.json), Python (requirements.txt/main.py/server.py/run.py), Ruby (Gemfile), Go (go.mod), PHP (composer.json/index.php/app.php)"
+          echo "Supported project types: Node.js (package.json), Python (requirements.txt/main.py/server.py/run.py), Ruby (Gemfile), Go (go.mod), PHP (composer.json/index.php/app.php), .NET (*.csproj/*.sln)"
           # Try to find any Python file as last resort
           python_file=$(find . -maxdepth 1 -name "*.py" -not -name "__init__.py" | head -n 1)
           if [ -n "$python_file" ]; then
@@ -116,8 +129,16 @@ jobs:
             pip install flask requests
             python "$python_file" &
           else
-            # Start a placeholder process to prevent the workflow from failing
-            sleep 1 &
+            # Try to find .NET project as last resort
+            dotnet_project=$(find . -maxdepth 1 -name "*.csproj" | head -n 1)
+            if [ -n "$dotnet_project" ]; then
+              echo "Found .NET project: $dotnet_project - attempting to run"
+              dotnet restore
+              dotnet run --urls "http://localhost:5000" &
+            else
+              # Start a placeholder process to prevent the workflow from failing
+              sleep 1 &
+            fi
           fi
         fi
         
@@ -218,4 +239,4 @@ jobs:
     - name: Cleanup
       run: |
         # Kill any background processes
-        pkill -f "node\|python\|ruby\|go\|php" || true 
+        pkill -f "node\|python\|ruby\|go\|php\|dotnet" || true 
