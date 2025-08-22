@@ -1,80 +1,140 @@
-# Jr Backend Engineer Code Challenge
+# Chuck Norris Backend (PHP) — Jr Backend Engineer Challenge
 
-- **Estimated time:** 20 minutes
-- **Difficulty:** Junior
-- **Suggested stack:** Any (NodeJS, Python, Ruby, Go, etc.)
+Backend sencillo en PHP 8 que consume la Chuck Norris API y expone endpoints propios en el puerto 5000. Incluye validación de categorías, manejo de errores y un endpoint de búsqueda (bonus).
 
-### Your goal:
+Endpoints
 
-Build a backend application that
-exposes the endpoints described below, consumes data from the specified public APIs and returns the responses also described below.
+Base URL (local): `http://127.0.0.1:5000`
 
-#### Context: 
-The Chuck Norris API lets you retrieve random jokes, category-specific jokes, search for jokes
-by keyword, and even personalize jokes with usernames. The original app even predates Slack!
-But for this challenge, we'll focus only on two endpoints.
+GET /categories
 
-### Requirements
+Retorna la lista de categorías disponibles.
 
-#### Expose your app through the port `5000`.
+Respuesta 200
 
-1. GET `/categories`
+```
+["animal","career","celebrity","dev","explicit","fashion","food","history","money","movie","music","political","religion","science","sport","travel"]
+```
 
-Returns a list of the available joke categories.
+GET /joke/{category}
 
-Internally calls:
-https://api.chucknorris.io/jokes/categories
+Retorna un chiste aleatorio de la categoría indicada.
 
-Expected response:
+Respuesta 200
 
-`
-[
-    "A", 
-    "List", 
-    "Of", 
-    "Jokes", 
-    "Categories"
+```
+{
+"id": "8d7m0p3tQ_6Jk9bC0b6xVg",
+"url": "https://api.chucknorris.io/jokes/8d7m0p3tQ_6Jk9bC0b6xVg",
+"category": "dev",
+"value": "Chuck Norris writes code that optimizes itself."
+}
+```
+
+Respuesta 400 (categoría inválida)
+
+```
+{
+"error": "Bad Request",
+"message": "Invalid category. See valid_categories for options."
+}
+```
+
+GET /search?query=term (bonus)
+
+Busca chistes por término.
+
+Respuesta 200
+
+```
+{
+"total": 2,
+"results": [
+{
+"id": "abc123",
+"url": "https://api.chucknorris.io/jokes/abc123",
+"category": "dev",
+"value": "Chuck Norris can divide by zero."
+},
+{
+"id": "def456",
+"url": "https://api.chucknorris.io/jokes/def456",
+"category": null,
+"value": "When Chuck Norris throws exceptions, it's across the room."
+}
 ]
-`
+}
+```
 
-2. GET `joke/{category}`
+## Códigos de estado
 
-Returns a random joke from the specified category.
+200 OK — Respuesta correcta.
 
-Internally calls:
-https://api.chucknorris.io/jokes/random?category={category}
+400 Bad Request — Input inválido (p.ej. categoría inexistente o query vacío).
 
-Expected response:
+404 Not Found — Ruta inexistente.
 
-`{
-    "id" : "requestId",
-    "url" : "publicApiUrl",
-    "category": "TheCategoryReceived",
-    "value" : "The joke in string"
-}`
+405 Method Not Allowed — Solo se soporta GET.
 
-#### We expect that you...
+502 Bad Gateway — Falla comunicando con la API pública (timeout, 4xx/5xx del upstream).
 
-* Use clear, clean code.
-* Handle edge cases (e.g. invalid category).
-* Return meaningful HTTP status codes.
-* No need for persistence or authentication.
+500 Internal Server Error — Error inesperado local.
 
-#### Bonus (Optional)
+## Arquitectura & Diseño
 
-If you finish early, consider adding:
-* A GET /search?query=term endpoint using:
-https://api.chucknorris.io/jokes/search?query=term
-* Validate that the provided category exists before requesting a joke.
-* Input validation & graceful error handling.
-* A README file with setup/run instructions.
+PHP puro + cURL, sin dependencias en runtime.
 
-#### Evaluation Criteria
-* Functional correctness.
-* Code clarity and structure.
-* Error handling and edge case coverage.
-* Ability to consume and transform external APIs.
-* Code reusability and modularity (if applicable).
+PSR-4 autoload con Composer.
 
-### Submit your app
-To submit your app, simply create a new branch and commit your changes.
+Capas: Router mínimo → Controladores → Servicios (API externa y validación) → Excepciones → Respuestas JSON.
+
+Validación de categoría con cache en memoria (proceso) para evitar llamadas redundantes.
+
+Timeouts y manejo de errores de red centralizado en ChuckClient.
+
+### Cómo correr (puerto 5000)
+
+Prerrequisitos
+
+PHP ≥ 8.0 (recomendado 8.1+)
+
+Composer (para autoload)
+
+cURL habilitado
+
+Pasos
+
+### 1) Instalar autoload
+
+composer dump-autoload
+
+### 2) Levantar el servidor embebido en 0.0.0.0:5000
+
+php -S 127.0.0.1:5000 -t public
+
+Probar rápido
+curl http://127.0.0.1:5000/categories
+curl http://127.0.0.1:5000/joke/dev
+curl "http://127.0.0.1:5000/search?query=database"
+
+## Ejemplos de uso (curl)
+
+### Lista de categorías
+
+curl -s http://127.0.0.1:5000/categories | jq .
+
+### Chiste por categoría (case-insensitive)
+
+curl -s http://127.0.0.1:5000/joke/DEV | jq .
+
+### Búsqueda
+
+curl -s "http://127.0.0.1:5000/search?query=cloud" | jq .
+
+⚙️ Configuración
+
+Valores definidos en src/Bootstrap.php:
+
+baseUrl: https://api.chucknorris.io
+
+timeoutSeconds: 5
