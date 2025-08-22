@@ -1,28 +1,140 @@
-1. **Requisitos**
+# Chuck Norris Backend (PHP) — Jr Backend Engineer Challenge
 
-* PHP >= 8.0 (recomendado 8.1+)
-* cURL habilitado (viene por defecto en la mayoría de instalaciones)
+Backend sencillo en PHP 8 que consume la Chuck Norris API y expone endpoints propios en el puerto 5000. Incluye validación de categorías, manejo de errores y un endpoint de búsqueda (bonus).
 
-2. **Instalación**
+Endpoints
 
-<pre class="overflow-visible!" data-start="6137" data-end="6193"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"><span class="" data-state="closed"></span></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-bash"><span><span># clona tu repo y copia index.php en la raíz</span><span>
-</span></span></code></div></div></pre>
+Base URL (local): `http://127.0.0.1:5000`
 
-3. **Ejecutar en puerto 5000**
+GET /categories
 
-<pre class="overflow-visible!" data-start="6226" data-end="6267"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"><span class="" data-state="closed"></span></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-bash"><span><span>php -S 0.0.0.0:5000 index.php
-</span></span></code></div></div></pre>
+Retorna la lista de categorías disponibles.
 
-> El archivo `index.php` actúa como router del servidor embebido de PHP.
+Respuesta 200
 
-4. **Probar con curl**
+```
+["animal","career","celebrity","dev","explicit","fashion","food","history","money","movie","music","political","religion","science","sport","travel"]
+```
 
-<pre class="overflow-visible!" data-start="6366" data-end="6563"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"><span class="" data-state="closed"></span></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-bash"><span><span># Categorías</span><span>
-curl http://localhost:5000/categories
+GET /joke/{category}
 
-</span><span># Chiste por categoría (ej: "dev")</span><span>
-curl http://localhost:5000/joke/dev
+Retorna un chiste aleatorio de la categoría indicada.
 
-</span><span># Búsqueda</span><span>
-curl </span><span>"http://localhost:5000/search?query=database"</span><span>
-</span></span></code></div></div></pre>
+Respuesta 200
+
+```
+{
+"id": "8d7m0p3tQ_6Jk9bC0b6xVg",
+"url": "https://api.chucknorris.io/jokes/8d7m0p3tQ_6Jk9bC0b6xVg",
+"category": "dev",
+"value": "Chuck Norris writes code that optimizes itself."
+}
+```
+
+Respuesta 400 (categoría inválida)
+
+```
+{
+"error": "Bad Request",
+"message": "Invalid category. See valid_categories for options."
+}
+```
+
+GET /search?query=term (bonus)
+
+Busca chistes por término.
+
+Respuesta 200
+
+```
+{
+"total": 2,
+"results": [
+{
+"id": "abc123",
+"url": "https://api.chucknorris.io/jokes/abc123",
+"category": "dev",
+"value": "Chuck Norris can divide by zero."
+},
+{
+"id": "def456",
+"url": "https://api.chucknorris.io/jokes/def456",
+"category": null,
+"value": "When Chuck Norris throws exceptions, it's across the room."
+}
+]
+}
+```
+
+## Códigos de estado
+
+200 OK — Respuesta correcta.
+
+400 Bad Request — Input inválido (p.ej. categoría inexistente o query vacío).
+
+404 Not Found — Ruta inexistente.
+
+405 Method Not Allowed — Solo se soporta GET.
+
+502 Bad Gateway — Falla comunicando con la API pública (timeout, 4xx/5xx del upstream).
+
+500 Internal Server Error — Error inesperado local.
+
+## Arquitectura & Diseño
+
+PHP puro + cURL, sin dependencias en runtime.
+
+PSR-4 autoload con Composer.
+
+Capas: Router mínimo → Controladores → Servicios (API externa y validación) → Excepciones → Respuestas JSON.
+
+Validación de categoría con cache en memoria (proceso) para evitar llamadas redundantes.
+
+Timeouts y manejo de errores de red centralizado en ChuckClient.
+
+### Cómo correr (puerto 5000)
+
+Prerrequisitos
+
+PHP ≥ 8.0 (recomendado 8.1+)
+
+Composer (para autoload)
+
+cURL habilitado
+
+Pasos
+
+### 1) Instalar autoload
+
+composer dump-autoload
+
+### 2) Levantar el servidor embebido en 0.0.0.0:5000
+
+php -S 127.0.0.1:5000 -t public
+
+Probar rápido
+curl http://127.0.0.1:5000/categories
+curl http://127.0.0.1:5000/joke/dev
+curl "http://127.0.0.1:5000/search?query=database"
+
+## Ejemplos de uso (curl)
+
+### Lista de categorías
+
+curl -s http://127.0.0.1:5000/categories | jq .
+
+### Chiste por categoría (case-insensitive)
+
+curl -s http://127.0.0.1:5000/joke/DEV | jq .
+
+### Búsqueda
+
+curl -s "http://127.0.0.1:5000/search?query=cloud" | jq .
+
+###Configuración
+
+Valores definidos en src/Bootstrap.php:
+
+baseUrl: https://api.chucknorris.io
+
+timeoutSeconds: 5
